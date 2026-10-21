@@ -1,0 +1,6 @@
+,degree,closeness,betweenness,eigenvector,pagerank
+degree,1.0000,0.8945,0.9049,0.7766,0.9788
+closeness,0.8945,1.0000,0.8980,0.8564,0.8247
+betweenness,0.9049,0.8980,1.0000,0.6939,0.8794
+eigenvector,0.7766,0.8564,0.6939,1.0000,0.6761
+pagerank,0.9788,0.8247,0.8794,0.6761,1.0000

@@ -1,0 +1,7 @@
+person,indegree (popularity),outdegree (activity),pagerank
+Ravi,4,1,0.3724
+Asha,2,2,0.3522
+Bala,1,1,0.1747
+Chitra,1,2,0.0356
+Deepa,1,1,0.0401
+Eshan,0,2,0.0250

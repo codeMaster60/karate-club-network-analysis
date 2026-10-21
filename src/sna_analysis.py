@@ -6,7 +6,7 @@ Computes every metric used in the lab and exports:
   - data/karate_edges.csv, data/karate_nodes.csv      (the dataset)
   - results/*.csv, results/summary.json               (all results)
   - results/figures/*.png                             (static figures)
-  - docs/data.js                                      (data for the website)
+  - website/data.js                                    (data for the website)
 
 Run from the repository root:
     python src/sna_analysis.py
@@ -30,7 +30,7 @@ from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA, RESULTS, FIGS, DOCS = (ROOT / "data", ROOT / "results",
-                             ROOT / "results" / "figures", ROOT / "docs")
+                             ROOT / "results" / "figures", ROOT / "website")
 SEED = 42
 LEADERS = {"Mr. Hi": 0, "Officer": 33}   # instructor and club administrator
 METRICS = ["degree", "closeness", "betweenness", "eigenvector", "pagerank"]

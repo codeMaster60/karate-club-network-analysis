@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Karate Club Split</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Social network analysis metrics, explained and explored on Zachary's Karate Club: degree, closeness, betweenness, eigenvector centrality and PageRank.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a dojo at night. A live network opens the page; then one chapter per metric (a–d, as set in the lab brief),
+   each with the definition on the left and a hands-on instrument on the right. Dark-first, with a full light theme. */
+:root {
+  --bg: #0c1019;          /* night indigo */
+  --surface: #141a28;
+  --raise: #1a2234;
+  --ink: #ece8dd;         /* warm paper white */
+  --muted: #959cad;
+  --line: #252e43;
+  --edge: #364260;
+  --hi: #7ea4ff;          /* aizome indigo, lifted for night: Mr. Hi */
+  --off: #ff9b5e;         /* kaki persimmon: the Officer */
+  --gold: #e9c46a;        /* obi gold: selection, paths, highlights */
+  --c2: #5ccf9f;
+  --c3: #c99bf0;
+  --ramp-lo: #222b40;
+  --ramp-hi: #f1e2b4;
+  --on-node: #0c1019;
+  --display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif", Georgia, serif;
+  --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #eef0f4; --surface: #ffffff; --raise: #f5f6f9; --ink: #131a2a; --muted: #586174; --line: #d9dde6; --edge: #b7bfcf;
+  --hi: #2b50b4; --off: #c4561b; --gold: #a07410; --c2: #1f8a62; --c3: #8a4bb8;
+  --ramp-lo: #e2e6ee; --ramp-hi: #131a2a; --on-node: #ffffff; color-scheme: light;
+} }
+:root[data-theme="light"] {
+  --bg: #eef0f4; --surface: #ffffff; --raise: #f5f6f9; --ink: #131a2a; --muted: #586174; --line: #d9dde6; --edge: #b7bfcf;
+  --hi: #2b50b4; --off: #c4561b; --gold: #a07410; --c2: #1f8a62; --c3: #8a4bb8;
+  --ramp-lo: #e2e6ee; --ramp-hi: #131a2a; --on-node: #ffffff; color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1220px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.1; font-weight: 800; }
+h2 { font-size: clamp(2rem, 4.2vw, 3.1rem); letter-spacing: -0.01em; }
+h3 { font-size: 1.25rem; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--gold); }
+b, strong { font-weight: 700; }
+.eyebrow { font: 600 0.74rem/1.2 var(--body); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 0.88rem; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- nav ---------- */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); }
+nav.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding: 0 max(16px, env(safe-area-inset-left, 0px));
+  background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+nav.top .wrap { display: flex; align-items: center; gap: 22px; height: 56px; }
+nav.top .brand { font-family: var(--display); font-weight: 800; white-space: nowrap; display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; }
+.obi { display: inline-flex; width: 22px; height: 6px; border-radius: 2px; overflow: hidden; gap: 2px; }
+.obi i { flex: 1; background: var(--hi); } .obi i + i { background: var(--off); }
+nav.top .links { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; margin-left: auto; min-width: 0; }
+nav.top .links::-webkit-scrollbar { display: none; }
+nav.top .links a { color: var(--muted); text-decoration: none; font-size: 0.87rem; font-weight: 500; padding: 6px 10px; border-radius: 999px; white-space: nowrap; }
+nav.top .links a:hover { color: var(--ink); background: var(--surface); }
+nav.top .links a .l { font-family: var(--display); color: var(--gold); font-weight: 800; margin-right: 4px; }
+
+/* ---------- hero ---------- */
+.hero { position: relative; display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr); gap: 28px; align-items: center; padding-block: 56px 36px; }
+@media (max-width: 960px) { .hero { grid-template-columns: minmax(0,1fr); padding-top: 36px; } }
+.hero-text { display: grid; gap: 22px; position: relative; z-index: 1; }
+.hero h1 { font-size: clamp(3.1rem, 8.4vw, 6.6rem); line-height: 0.94; letter-spacing: -0.02em; }
+.cut { display: flex; gap: 14px; width: min(340px, 80%); height: 7px; }
+.cut i { flex: 1; border-radius: 2px; background: var(--hi); transform-origin: right; }
+.cut i + i { background: var(--off); transform-origin: left; }
+@media (prefers-reduced-motion: no-preference) {
+  .cut i { animation: tear 1.1s cubic-bezier(.2,.7,.1,1) both .25s; }
+  @keyframes tear { from { transform: scaleX(.2); } to { transform: none; } }
+}
+.lede { font-size: clamp(1.06rem, 1.6vw, 1.22rem); max-width: 54ch; }
+.leaders { display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: 0.95rem; }
+.leaders span { display: inline-flex; align-items: center; gap: 8px; }
+.dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; flex: none; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer;
+  font: 600 0.95rem var(--body); padding: 11px 18px; border-radius: 999px; border: 1px solid var(--line);
+  color: var(--ink); background: transparent; transition: background .2s, border-color .2s, transform .2s;
+}
+.btn:hover { border-color: var(--muted); transform: translateY(-1px); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.hero-stage { position: relative; min-width: 0; }
+.hero-stage svg { width: 100%; height: auto; display: block; touch-action: none; }
+.hero-stage .hint { position: absolute; left: 12px; bottom: 10px; font-size: 0.8rem; color: var(--muted); pointer-events: none; }
+.kanji { position: absolute; right: -6px; top: 18px; writing-mode: vertical-rl; font: 800 clamp(5rem, 11vw, 9rem)/1 var(--display); color: var(--ink); opacity: .05; pointer-events: none; user-select: none; }
+.tip {
+  position: absolute; pointer-events: none; z-index: 3; background: var(--raise); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; font-size: 0.82rem; line-height: 1.35; white-space: nowrap;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .25); transform: translate(-50%, calc(-100% - 14px));
+}
+
+/* ---------- glossary strip ---------- */
+.gloss { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.gloss > div { padding: 22px 20px 22px 0; display: grid; gap: 4px; align-content: start; border-bottom: 1px solid var(--line); }
+.gloss > div:not(:nth-child(3n+1)) { padding-left: 20px; border-left: 1px solid var(--line); }
+.gloss b.v { font: 500 2rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.gloss .t { font-weight: 700; }
+.gloss p { color: var(--muted); font-size: 0.9rem; }
+@media (max-width: 760px) {
+  .gloss { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .gloss > div:not(:nth-child(3n+1)) { padding-left: 0; border-left: 0; }
+  .gloss > div:nth-child(even) { padding-left: 16px; border-left: 1px solid var(--line); }
+}
+@media (max-width: 440px) { .gloss { grid-template-columns: minmax(0,1fr); } .gloss > div:nth-child(even) { padding-left: 0; border-left: 0; } }
+
+/* ---------- sections & chapters ---------- */
+section { padding-block: 84px 0; display: grid; gap: 28px; scroll-margin-top: 64px; }
+.sec-head { display: grid; gap: 12px; max-width: 72ch; }
+.sec-head > p { color: var(--muted); font-size: 1.05rem; }
+.chap-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 22px; align-items: end; }
+.chap-head .letter { grid-row: span 2; font: 800 clamp(4.6rem, 9vw, 7rem)/0.8 var(--display); color: var(--gold); }
+.brief { border-left: 2px solid var(--gold); padding: 2px 0 2px 16px; max-width: 78ch; color: var(--ink); font-size: 1.02rem; }
+.brief .src { display: block; margin-top: 6px; color: var(--muted); font-size: 0.78rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; }
+
+.chapter { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.35fr); gap: 22px; align-items: start; }
+@media (max-width: 980px) { .chapter { grid-template-columns: minmax(0,1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.def { padding: 24px; display: grid; gap: 18px; min-width: 0; }
+.def h4 { margin: 0; font: 600 0.74rem/1 var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.def .block { display: grid; gap: 8px; }
+.formula {
+  font: 500 1.06rem/1.5 var(--mono); padding: 14px 16px; border-radius: 10px; background: var(--bg);
+  border: 1px solid var(--line); overflow-x: auto; white-space: nowrap;
+}
+.where { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 0.9rem; color: var(--muted); }
+.where code { font: 500 0.9rem var(--mono); color: var(--ink); }
+.readas { font-family: var(--display); font-size: 1.22rem; font-weight: 600; line-height: 1.35; }
+.worked { background: var(--raise); border: 1px dashed var(--edge); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; }
+.worked .calc { font: 500 0.98rem/1.5 var(--mono); overflow-x: auto; white-space: nowrap; color: var(--gold); }
+
+.viz { padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.viz-bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; padding: 4px 6px 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.84rem; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.rampbar { width: 120px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--ramp-lo), var(--ramp-hi)); border: 1px solid var(--line); }
+.readout { padding: 6px 8px 4px; display: grid; gap: 10px; }
+
+/* graph */
+.graph { width: 100%; height: auto; display: block; }
+.graph line { stroke: var(--edge); stroke-width: 1.5; transition: stroke .35s, opacity .35s, stroke-width .35s; }
+.graph line.lit { stroke: var(--gold); stroke-width: 3.2; }
+.graph.dim line:not(.lit) { opacity: .28; }
+.graph .node { cursor: pointer; }
+.graph .node circle.c { stroke: var(--surface); stroke-width: 2.5; transition: r .55s cubic-bezier(.3,.7,.2,1), fill .45s, opacity .35s; }
+.graph .node text { font: 600 11px var(--mono); pointer-events: none; transition: fill .45s, opacity .35s; }
+.graph .node .ring { fill: none; stroke: var(--gold); stroke-width: 3.5; opacity: 0; transition: opacity .3s; }
+.graph .node.sel .ring { opacity: 1; }
+.graph .node .dash { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-dasharray: 4 3; opacity: 0; transition: opacity .3s; }
+.graph .node.wrong .dash { opacity: 1; }
+.graph .node.faded circle.c, .graph .node.faded text { opacity: .22; }
+.graph .node:focus-visible { outline: none; }
+.graph .node:focus-visible .ring { opacity: 1; }
+.graph .tag { font: 600 13px var(--body); fill: var(--muted); pointer-events: none; }
+.graph line.gone { opacity: .06; }
+
+/* controls */
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; }
+.seg button { font: 600 0.86rem var(--body); color: var(--muted); background: transparent; border: 0; border-radius: 999px; padding: 7px 14px; cursor: pointer; transition: background .2s, color .2s; }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.ctrl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+select, .ctrl button {
+  font: 600 0.9rem var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 12px; cursor: pointer;
+}
+.ctrl button:hover { border-color: var(--muted); }
+.ctrl button.go { background: var(--gold); color: var(--on-node); border-color: var(--gold); }
+input[type=range] { width: 100%; accent-color: var(--gold); }
+label.l { font: 600 0.74rem var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+/* lists & chips */
+.chip { display: inline-flex; align-items: center; justify-content: center; min-width: 2.15rem; height: 1.65rem; padding: 0 6px; border-radius: 7px; font: 600 0.85rem var(--mono); color: var(--on-node); vertical-align: middle; }
+.chip.hi { background: var(--hi); } .chip.off { background: var(--off); }
+.top5 { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.top5 li { display: grid; grid-template-columns: 1.4rem 2.4rem minmax(0,1fr) 4.4rem; gap: 10px; align-items: center; font-size: 0.9rem; }
+.top5 .rk { color: var(--muted); font: 0.8rem var(--mono); }
+.top5 .track { height: 8px; border-radius: 4px; background: var(--bg); overflow: hidden; }
+.top5 .fill { display: block; height: 100%; border-radius: 4px; background: var(--gold); transition: width .5s cubic-bezier(.3,.7,.2,1); }
+.top5 .val { text-align: right; font: 0.86rem var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+.pathlist { display: grid; gap: 6px; }
+.pathlist div { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.pathlist .arr { color: var(--muted); font-size: .8rem; }
+.dist-bars { display: grid; gap: 5px; }
+.dist-bars div { display: grid; grid-template-columns: 4.6rem minmax(0,1fr) 3.4rem; gap: 10px; align-items: center; font-size: 0.86rem; }
+.dist-bars .track { height: 10px; border-radius: 3px; background: var(--bg); overflow: hidden; }
+.dist-bars .fill { display: block; height: 100%; transition: width .45s; }
+.dist-bars .n { text-align: right; font-family: var(--mono); color: var(--muted); }
+table.t { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+table.t th, table.t td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+table.t th { font: 600 0.72rem var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+table.t .r { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+table.t tr.on td { color: var(--gold); font-weight: 700; }
+.scroll { overflow-x: auto; }
+.status { font: 500 0.92rem/1.45 var(--mono); color: var(--muted); min-height: 2.9em; }
+.status b { color: var(--gold); font-weight: 600; }
+
+/* sub-block inside a chapter */
+.sub { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.35fr); gap: 22px; align-items: center; margin-top: 8px; }
+@media (max-width: 980px) { .sub { grid-template-columns: minmax(0,1fr); } }
+.sub .def { background: transparent; border: 0; padding: 4px 0; }
+.digraph text.n { font: 700 13px var(--mono); fill: var(--on-node); pointer-events: none; }
+.digraph text.lbl { font: 600 13px var(--body); fill: var(--ink); pointer-events: none; }
+.digraph line { stroke: var(--edge); stroke-width: 1.8; transition: stroke .3s, opacity .3s; }
+.digraph line.lit { stroke: var(--gold); stroke-width: 3; }
+.digraph.dim line:not(.lit) { opacity: .3; }
+.digraph g.p { cursor: pointer; }
+.digraph circle { transition: r .4s, fill .3s; stroke: var(--surface); stroke-width: 2.5; }
+.digraph g.p.sel circle { stroke: var(--gold); stroke-width: 3.5; }
+
+/* comparison */
+.cmp { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 22px; }
+@media (max-width: 980px) { .cmp { grid-template-columns: minmax(0,1fr); } }
+.card { padding: 22px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.bump text { font: 500 12px var(--mono); fill: var(--muted); }
+.bump .axis { font: 600 12px var(--body); fill: var(--ink); }
+.bump .gl { stroke: var(--line); }
+.bump .line { fill: none; stroke-width: 3; opacity: .85; transition: opacity .25s, stroke-width .25s; }
+.bump.hov .line { opacity: .12; }
+.bump.hov .line.on { opacity: 1; stroke-width: 4.5; }
+.bump .pt { stroke: var(--surface); stroke-width: 2; transition: opacity .25s; }
+.bump.hov .pt { opacity: .15; } .bump.hov .pt.on { opacity: 1; }
+.bump .lab { font: 700 11px var(--mono); fill: var(--on-node); pointer-events: none; }
+.bump g.m { cursor: pointer; }
+.heat { display: grid; grid-template-columns: 6.4rem repeat(5, minmax(0,1fr)); gap: 3px; font-size: 0.8rem; min-width: 380px; }
+.heat .h { color: var(--muted); font-weight: 600; display: flex; align-items: center; }
+.heat .h.col { justify-content: center; text-align: center; font-size: 0.7rem; padding-bottom: 4px; }
+.heat .cell { aspect-ratio: 1.5; display: flex; align-items: center; justify-content: center; border-radius: 5px; font: 500 0.85rem var(--mono); max-width: 100%; }
+.takeaway { font-family: var(--display); font-size: clamp(1.2rem, 2.2vw, 1.55rem); line-height: 1.4; max-width: 60ch; font-weight: 600; }
+.takeaway em { font-style: normal; color: var(--gold); }
+
+/* factions + robustness */
+.split2 { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.92fr); gap: 22px; align-items: start; }
+@media (max-width: 980px) { .split2 { grid-template-columns: minmax(0,1fr); } }
+.scores { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1px; background: var(--line); border-radius: 10px; overflow: hidden; }
+.scores div { background: var(--surface); padding: 14px; display: grid; gap: 2px; }
+.scores b { font: 500 1.5rem var(--mono); font-variant-numeric: tabular-nums; }
+.scores span { font-size: 0.78rem; color: var(--muted); }
+.big { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.big b { font: 500 clamp(2.4rem, 5vw, 3.4rem)/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--gold); }
+.chart text { font: 11px var(--mono); fill: var(--muted); }
+.chart .grid { stroke: var(--line); }
+.chart .curve { fill: none; stroke: var(--edge); stroke-width: 1.6; }
+.chart .curve.on { stroke: var(--gold); stroke-width: 3.2; }
+.chart .curve.rand { stroke: var(--muted); stroke-dasharray: 5 4; stroke-width: 2; }
+.chart .marker { stroke: var(--ink); stroke-dasharray: 3 3; }
+.chart .pt { fill: var(--gold); stroke: var(--surface); stroke-width: 2; }
+.chart .lab-on { fill: var(--gold); font-weight: 600; }
+.ring-key { width: 14px; height: 14px; border-radius: 50%; border: 2px dashed var(--ink); display: inline-block; }
+
+/* findings */
+.findings { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.findings > div { padding: 26px 22px 26px 0; display: grid; gap: 10px; align-content: start; }
+.findings > div + div { padding-left: 22px; border-left: 1px solid var(--line); }
+.findings .k { font: 500 2.6rem/1 var(--mono); color: var(--gold); font-variant-numeric: tabular-nums; }
+.findings p { color: var(--muted); font-size: 0.93rem; }
+@media (max-width: 980px) {
+  .findings { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .findings > div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .findings > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 520px) { .findings { grid-template-columns: minmax(0,1fr); } .findings > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); } }
+
+footer { margin-top: 84px; padding-top: 28px; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px; font-size: 0.88rem; color: var(--muted); }
+@media (max-width: 760px) { footer { grid-template-columns: minmax(0,1fr); } }
+footer ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; }
+footer h3 { color: var(--ink); font-size: 1.05rem; margin-bottom: 8px; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<nav class="top" aria-label="Sections">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="obi" aria-hidden="true"><i></i><i></i></span>Karate Club SNA</a>
+    <div class="links">
+      <a href="#network">Network</a>
+      <a href="#degree"><span class="l">a</span>Degree</a>
+      <a href="#closeness"><span class="l">b</span>Closeness</a>
+      <a href="#betweenness"><span class="l">c</span>Betweenness</a>
+      <a href="#eigenvector"><span class="l">d</span>Eigenvector</a>
+      <a href="#compare">Compare</a>
+      <a href="#factions">Factions</a>
+      <a href="#robustness">Robustness</a>
+      <a href="#findings">Findings</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap" id="top">
+
+<!-- ============================ HERO ============================ -->
+<header class="hero">
+  <div class="hero-text">
+    <span class="eyebrow">ATSMA Lab · Social Network Analysis Metrics</span>
+    <h1>The Karate<br>Club Split</h1>
+    <div class="cut" aria-hidden="true"><i></i><i></i></div>
+    <p class="lede">From 1970 to 1972, anthropologist Wayne Zachary recorded who was friends with whom among the 34 members of a university karate club. Then a dispute between the instructor and the club's administrator broke the club in two. Using four centrality metrics, we ask: <b>who held this network together, and could its structure have predicted the split?</b></p>
+    <div class="leaders">
+      <span><span class="dot" style="background:var(--hi)"></span><b>Mr. Hi</b> · instructor · member 0</span>
+      <span><span class="dot" style="background:var(--off)"></span><b>Officer</b> · administrator · member 33</span>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="#degree">Explore the metrics ↓</a>
+      <a class="btn" href="#findings">Jump to findings</a>
+    </div>
+  </div>
+  <div class="hero-stage">
+    <span class="kanji" aria-hidden="true">空手</span>
+    <svg id="hero" class="graph" viewBox="0 0 900 700" role="img" aria-label="The karate club friendship network: 34 members, 78 friendships, coloured by the side each member joined"></svg>
+    <div class="tip" id="heroTip" hidden></div>
+    <span class="hint">Drag the members · colour = side they joined · size = number of friends</span>
+  </div>
+</header>
+
+<!-- ============================ NETWORK ============================ -->
+<section id="network">
+  <div class="sec-head">
+    <span class="eyebrow">The network</span>
+    <h2>Each member is a node. Each friendship is an edge.</h2>
+    <p>Zachary counted a friendship when two members met consistently outside the club. Friendship goes both ways, so the network is <b>undirected</b>. Every member's later choice of side is known, which lets us check our metrics against what really happened.</p>
+  </div>
+  <div class="gloss" id="gloss"></div>
+</section>
+
+<!-- ============================ a. DEGREE ============================ -->
+<section id="degree">
+  <div class="chap-head">
+    <span class="letter" aria-hidden="true">a</span>
+    <span class="eyebrow">Core centrality metric a</span>
+    <h2>Degree centrality</h2>
+  </div>
+  <p class="brief">Counts the number of direct connections (edges) a node has. In directed networks it splits into <b>indegree</b> (incoming ties, popularity) and <b>outdegree</b> (outgoing ties, activity).<span class="src">From the lab brief</span></p>
+
+  <div class="chapter">
+    <div class="panel def">
+      <div class="block"><h4>Formula</h4>
+        <div class="formula">C<sub>D</sub>(v) = deg(v) / (n − 1)</div>
+        <ul class="where"><li><code>deg(v)</code> number of friends of member v</li><li><code>n − 1</code> = 33, the most friends anyone could have; dividing scales the score to 0–1</li></ul>
+      </div>
+      <div class="block"><h4>Read it as</h4><p class="readas">How many people can this member talk to directly?</p></div>
+      <div class="worked" id="degWorked"></div>
+    </div>
+    <div class="panel viz">
+      <svg class="graph" id="gDeg" role="img" aria-label="Network sized by degree"></svg>
+      <div class="viz-bar"><div class="legend"><span>fewer friends</span><span class="rampbar"></span><span>more friends</span></div><span class="small muted">Click any member</span></div>
+      <div class="readout"><ol class="top5" id="degTop"></ol></div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <div class="def">
+      <h3>Indegree and outdegree</h3>
+      <p class="muted">The karate network has no direction, so every tie counts once for both members. On social media, ties often go one way: you can follow someone who does not follow you back. This small follow network shows the two halves of degree.</p>
+      <div class="seg" id="dirSeg" role="group" aria-label="Direction"><button type="button" data-d="in">Indegree · popularity</button><button type="button" data-d="out">Outdegree · activity</button></div>
+      <div class="worked" id="dirWorked"></div>
+    </div>
+    <div class="panel viz">
+      <svg class="digraph" id="gDir" viewBox="0 0 520 380" role="img" aria-label="Directed follow network"></svg>
+      <div class="scroll"><table class="t" id="dirTable"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ b. CLOSENESS ============================ -->
+<section id="closeness">
+  <div class="chap-head">
+    <span class="letter" aria-hidden="true">b</span>
+    <span class="eyebrow">Core centrality metric b</span>
+    <h2>Closeness centrality</h2>
+  </div>
+  <p class="brief">Measures the average length of the shortest paths from a node to all other nodes in the network. High closeness means a node can quickly interact with or spread information to the entire network.<span class="src">From the lab brief</span></p>
+  <div class="chapter">
+    <div class="panel def">
+      <div class="block"><h4>Formula</h4>
+        <div class="formula">C<sub>C</sub>(v) = (n − 1) / Σ<sub>u</sub> d(v, u)</div>
+        <ul class="where"><li><code>d(v, u)</code> fewest steps (friendships) from v to u</li><li><code>Σ d(v, u)</code> total steps to reach all 33 other members</li><li>The inverse of the average distance, so <b>closer = higher</b></li></ul>
+      </div>
+      <div class="block"><h4>Read it as</h4><p class="readas">How quickly can news from this member reach everyone?</p></div>
+      <div class="worked" id="cloWorked"></div>
+    </div>
+    <div class="panel viz">
+      <svg class="graph" id="gClo" role="img" aria-label="Network coloured by distance from the selected member"></svg>
+      <div class="viz-bar"><div class="legend"><span><span class="dot" style="background:var(--gold)"></span>selected member</span><span>shade = steps away</span></div><span class="small muted">Click any member to measure from there</span></div>
+      <div class="readout"><div class="dist-bars" id="cloBars"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ c. BETWEENNESS ============================ -->
+<section id="betweenness">
+  <div class="chap-head">
+    <span class="letter" aria-hidden="true">c</span>
+    <span class="eyebrow">Core centrality metric c</span>
+    <h2>Betweenness centrality</h2>
+  </div>
+  <p class="brief">Calculates how often a node falls on the shortest path between other pairs of nodes. Nodes with high scores act as vital bridges or gatekeepers controlling information flow between different clusters.<span class="src">From the lab brief</span></p>
+  <div class="chapter">
+    <div class="panel def">
+      <div class="block"><h4>Formula</h4>
+        <div class="formula">C<sub>B</sub>(v) = Σ<sub>s ≠ v ≠ t</sub> σ<sub>st</sub>(v) / σ<sub>st</sub></div>
+        <ul class="where"><li><code>σ<sub>st</sub></code> number of shortest paths from s to t</li><li><code>σ<sub>st</sub>(v)</code> how many of those pass through v</li><li>Summed over every pair, then divided by the 528 pairs that exclude v, giving 0–1</li></ul>
+      </div>
+      <div class="block"><h4>Read it as</h4><p class="readas">If two members talk along the shortest route, how often must the message pass through this member?</p></div>
+      <div class="worked" id="betWorked"></div>
+    </div>
+    <div class="panel viz">
+      <div class="viz-bar">
+        <div class="ctrl">
+          <label class="l" for="betFrom">From</label><select id="betFrom"></select>
+          <label class="l" for="betTo">To</label><select id="betTo"></select>
+          <button type="button" id="betSwap" aria-label="Swap from and to">⇄</button>
+        </div>
+        <span class="small muted">Or click two members</span>
+      </div>
+      <svg class="graph" id="gBet" role="img" aria-label="Shortest paths between two members"></svg>
+      <div class="readout">
+        <div class="pathlist" id="betPaths"></div>
+      </div>
+    </div>
+  </div>
+  <div class="chapter">
+    <div class="def" style="padding:4px 0">
+      <h3>Who is on everyone's path?</h3>
+      <p class="muted">Repeat the path count above for all 561 pairs of members and add up each member's share. That total is betweenness. Two members carry most of the traffic.</p>
+    </div>
+    <div class="panel card"><ol class="top5" id="betTop"></ol></div>
+  </div>
+</section>
+
+<!-- ============================ d. EIGENVECTOR ============================ -->
+<section id="eigenvector">
+  <div class="chap-head">
+    <span class="letter" aria-hidden="true">d</span>
+    <span class="eyebrow">Core centrality metric d</span>
+    <h2>Eigenvector centrality</h2>
+  </div>
+  <p class="brief">Assigns relative scores to all nodes based on the principle that connections to high-scoring (well-connected) nodes contribute more to the score of the node in question. PageRank is a famous variant of this concept.<span class="src">From the lab brief</span></p>
+  <div class="chapter">
+    <div class="panel def">
+      <div class="block"><h4>Formula</h4>
+        <div class="formula">x<sub>v</sub> = (1/λ) Σ<sub>u ∈ N(v)</sub> x<sub>u</sub> &nbsp;⇔&nbsp; A x = λ x</div>
+        <ul class="where"><li><code>x<sub>v</sub></code> score of member v</li><li><code>N(v)</code> v's friends; <code>A</code> the adjacency matrix</li><li><code>λ</code> the largest eigenvalue; x is its eigenvector</li></ul>
+      </div>
+      <div class="block"><h4>Read it as</h4><p class="readas">Is this member friends with important people?</p></div>
+      <div class="worked" id="eigWorked"></div>
+    </div>
+    <div class="panel viz">
+      <div class="viz-bar">
+        <div class="ctrl">
+          <button type="button" class="go" id="eigPlay">▶ Run</button>
+          <button type="button" id="eigStep">Step</button>
+          <button type="button" id="eigReset">Reset</button>
+        </div>
+        <span class="small muted">Watch the scores settle</span>
+      </div>
+      <svg class="graph" id="gEig" role="img" aria-label="Eigenvector centrality computed step by step"></svg>
+      <div class="readout">
+        <p class="status" id="eigStatus" aria-live="polite"></p>
+        <ol class="top5" id="eigTop"></ol>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <div class="def">
+      <h3>PageRank, the famous variant</h3>
+      <p class="muted">Google's algorithm imagines a reader who follows a random friendship with probability <b>d</b>, or jumps to any random member with probability 1 − d. A member's score is the share of time the reader spends there. Each member splits its score evenly among its friends.</p>
+      <div class="formula">PR(v) = (1 − d)/n + d · Σ<sub>u ∈ N(v)</sub> PR(u) / deg(u)</div>
+      <div class="block">
+        <label class="l" for="prD">Damping d = <span class="mono" id="prDv"></span></label>
+        <input type="range" id="prD" min="0" max="0.99" step="0.01" value="0.85">
+        <p class="small muted">At d = 0 everyone scores the same (1/34). The standard value is 0.85. Drag it and watch the hubs grow.</p>
+      </div>
+      <ol class="top5" id="prTop"></ol>
+    </div>
+    <div class="panel viz">
+      <svg class="graph" id="gPr" role="img" aria-label="Network sized by PageRank"></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ COMPARE ============================ -->
+<section id="compare">
+  <div class="sec-head">
+    <span class="eyebrow">Comparing the metrics</span>
+    <h2>Same two leaders. Different winners.</h2>
+    <p>Each line follows one member's rank across the five metrics. Hover or tap a line to follow it.</p>
+  </div>
+  <div class="cmp">
+    <div class="panel card">
+      <h3>Rank of the key members under each metric</h3>
+      <div class="scroll"><svg class="bump" id="bump" viewBox="0 0 640 420" role="img" aria-label="Rank of key members across metrics" style="min-width:520px;width:100%;height:auto"></svg></div>
+    </div>
+    <div class="panel card">
+      <h3>How alike are the rankings?</h3>
+      <p class="small muted">Spearman rank correlation across all 34 members. 1.00 means two metrics put everyone in the same order.</p>
+      <div class="scroll"><div class="heat" id="heat"></div></div>
+    </div>
+  </div>
+  <p class="takeaway">The Officer wins on <em>popularity and influence</em> (degree, eigenvector, PageRank). Mr. Hi wins on <em>reach and brokerage</em> (closeness, betweenness). Degree and PageRank are almost the same ranking; eigenvector differs most, because it rewards sitting inside the core rather than bridging between groups.</p>
+</section>
+
+<!-- ============================ FACTIONS ============================ -->
+<section id="factions">
+  <div class="sec-head">
+    <span class="eyebrow">Testing against reality</span>
+    <h2>Can the network predict who went where?</h2>
+    <p>These methods see only the friendships, never the split. We compare their groups with the side each member actually joined.</p>
+  </div>
+  <div class="seg" id="commSeg" role="group" aria-label="Method"></div>
+  <div class="split2">
+    <div class="panel viz">
+      <svg class="graph" id="gComm" role="img" aria-label="Detected groups"></svg>
+      <div class="viz-bar"><div class="legend" id="commLegend"></div></div>
+    </div>
+    <div style="display:grid;gap:22px;min-width:0">
+      <div class="panel card" id="commCard" aria-live="polite"></div>
+      <div class="panel card">
+        <span class="eyebrow">Homophily</span>
+        <div class="big"><b id="homoVal"></b><span class="muted">of friendships stay inside one side</span></div>
+        <p class="muted small" id="homoText"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ROBUSTNESS ============================ -->
+<section id="robustness">
+  <div class="sec-head">
+    <span class="eyebrow">Why centrality matters</span>
+    <h2>Take out the central members and the club falls apart</h2>
+    <p>Remove members in order of a metric. The coloured members are the largest group that can still reach each other.</p>
+  </div>
+  <div class="split2">
+    <div class="panel viz"><svg class="graph" id="gAtk" role="img" aria-label="Network after removing members"></svg></div>
+    <div style="display:grid;gap:22px;min-width:0">
+      <div class="panel card">
+        <label class="l" for="atkMetric">Remove members by</label>
+        <select id="atkMetric"></select>
+        <label class="l" for="atkK">Members removed: <span class="mono" id="atkKv"></span></label>
+        <input type="range" id="atkK" min="0" max="12" step="1" value="4">
+        <div class="big"><b id="atkVal"></b><span class="muted" id="atkTxt"></span></div>
+        <p class="small muted" id="atkList"></p>
+      </div>
+      <div class="panel card">
+        <span class="eyebrow">Largest connected group as members leave</span>
+        <svg class="chart" id="atkChart" viewBox="0 0 440 240" role="img" aria-label="Robustness curves"></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FINDINGS ============================ -->
+<section id="findings">
+  <div class="sec-head">
+    <span class="eyebrow">Findings</span>
+    <h2>What the metrics told us</h2>
+  </div>
+  <div class="findings">
+    <div><span class="k">0 · 33</span><h3>Every metric finds the leaders</h3><p>From friendships alone, all five metrics put Mr. Hi and the Officer in their top two: the two people at the centre of the real dispute.</p></div>
+    <div><span class="k">44%</span><h3>Mr. Hi holds the club together</h3><p>He lies on 44% of all shortest paths. Remove him and 6 members lose all contact with the club. The Officer has more friends; Mr. Hi is the better bridge.</p></div>
+    <div><span class="k">33/34</span><h3>Structure predicted the split</h3><p>"Join the nearer leader" predicts 33 of 34 members. Girvan–Newman, which cuts high-betweenness ties, gets 32.</p></div>
+    <div><span class="k">29%</span><h3>A few members carry everyone</h3><p>Remove the top 4 by betweenness and only 29% of the club stays connected. Remove 4 at random and about 86% does.</p></div>
+  </div>
+  <div class="panel card">
+    <h3>Summary</h3>
+    <div class="scroll"><table class="t" style="min-width:640px">
+      <thead><tr><th></th><th>Metric</th><th>Question it answers</th><th>Top member</th><th>What it showed</th></tr></thead>
+      <tbody>
+        <tr><td class="mono" style="color:var(--gold)">a</td><td><b>Degree</b></td><td>How many direct friends?</td><td><span class="chip off">33</span></td><td>Both leaders are tied directly to about half the club</td></tr>
+        <tr><td class="mono" style="color:var(--gold)">b</td><td><b>Closeness</b></td><td>How fast to reach everyone?</td><td><span class="chip hi">0</span></td><td>Small world: any two members are only 2.4 steps apart</td></tr>
+        <tr><td class="mono" style="color:var(--gold)">c</td><td><b>Betweenness</b></td><td>How often on others' shortest paths?</td><td><span class="chip hi">0</span></td><td>Mr. Hi is the main bridge (0.44 vs the Officer's 0.30)</td></tr>
+        <tr><td class="mono" style="color:var(--gold)">d</td><td><b>Eigenvector</b></td><td>Friends with important people?</td><td><span class="chip off">33</span></td><td>Member 2 ranks 3rd with only 10 friends, through ties to both leaders</td></tr>
+        <tr><td class="mono" style="color:var(--gold)">d</td><td><b>PageRank</b></td><td>Where does a random walker spend time?</td><td><span class="chip off">33</span></td><td>Follows degree closely when ties have no direction</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small muted">Limitation: centrality describes position, not motive. Member 8, the one member every model misplaces, joined Mr. Hi for a personal reason; Zachary reports he was close to his black-belt exam.</p>
+  </div>
+</section>
+
+<footer>
+  <div>
+    <h3>Data and method</h3>
+    <p>Zachary's Karate Club: 34 members, 78 friendships and each member's faction. All metrics computed in Python with NetworkX (code and notebook in the project repository) and checked against the Network Repository's published statistics. The interactive parts of this page recompute closeness, shortest paths, eigenvector centrality and PageRank live in your browser. Members are numbered 0–33; add 1 for the numbering in Zachary's paper.</p>
+  </div>
+  <div>
+    <h3>References</h3>
+    <ol>
+      <li>Zachary, W. W. (1977). An information flow model for conflict and fission in small groups. <i>Journal of Anthropological Research</i>, 33(4), 452–473.</li>
+      <li>Rossi, R. A. &amp; Ahmed, N. K. (2015). The Network Data Repository. <a href="https://networkrepository.com/soc-karate.php" target="_blank" rel="noopener">soc-karate</a></li>
+      <li>mexwell. Fundamentals of Social Network Analysis. <a href="https://www.kaggle.com/code/mexwell/fundamentals-of-social-network-analysis-sna" target="_blank" rel="noopener">Kaggle</a></li>
+      <li>Hagberg, Schult &amp; Swart (2008). Exploring network structure, dynamics, and function using NetworkX.</li>
+    </ol>
+  </div>
+</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="data.js"></script>
+<script>
+(() => {
+"use strict";
+const D = window.SNA_DATA, N = D.nodes, E = D.edges, n = N.length;
+const byId = new Map(N.map(v => [v.id, v]));
+const adj = new Map(N.map(v => [v.id, []]));
+E.forEach(e => { adj.get(e.source).push(e.target); adj.get(e.target).push(e.source); });
+adj.forEach(a => a.sort((x, y) => x - y));
+const NS = "http://www.w3.org/2000/svg";
+const $ = id => document.getElementById(id);
+const el = (tag, attrs = {}, parent) => { const x = document.createElementNS(NS, tag); for (const k in attrs) x.setAttribute(k, attrs[k]); if (parent) parent.append(x); return x; };
+const f = (v, d = 3) => Number(v).toFixed(d);
+const pct = v => Math.round(v * 100) + "%";
+const cls = id => byId.get(id).club === "Mr. Hi" ? "hi" : "off";
+const chip = id => `<span class="chip ${cls(id)}">${id}</span>`;
+const facFill = id => byId.get(id).club === "Mr. Hi" ? "var(--hi)" : "var(--off)";
+const ramp = s => `color-mix(in oklab, var(--ramp-lo), var(--ramp-hi) ${Math.round(Math.max(0, Math.min(1, s)) * 100)}%)`;
+const rampText = s => s > 0.5 ? "var(--surface)" : "var(--ink)";
+const METRICS = ["degree", "closeness", "betweenness", "eigenvector", "pagerank"];
+const LABEL = { degree: "Degree", closeness: "Closeness", betweenness: "Betweenness", eigenvector: "Eigenvector", pagerank: "PageRank" };
+const ekey = (a, b) => a < b ? a + "-" + b : b + "-" + a;
+
+function bfs(src) {
+  const dist = new Map([[src, 0]]), q = [src];
+  for (let i = 0; i < q.length; i++) { const v = q[i]; for (const u of adj.get(v)) if (!dist.has(u)) { dist.set(u, dist.get(v) + 1); q.push(u); } }
+  return dist;
+}
+function topList(target, rows, max, fmt = v => f(v)) {
+  target.innerHTML = rows.map((r, i) => `<li><span class="rk">${i + 1}</span>${chip(r.id)}<span class="track"><span class="fill" style="width:${(r.v / max * 100).toFixed(1)}%"></span></span><span class="val">${fmt(r.v)}</span></li>`).join("");
+}
+
+/* ---------- static graph renderer (shared layout so every view matches) ---------- */
+function graph(svg, { onPick, W = 1000, H = 720, P = 46 } = {}) {
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const X = v => P + v.x * (W - 2 * P), Y = v => P + v.y * (H - 2 * P);
+  const gE = el("g", {}, svg), gN = el("g", {}, svg);
+  const edges = new Map();
+  E.forEach(e => { const a = byId.get(e.source), b = byId.get(e.target); edges.set(ekey(e.source, e.target), el("line", { x1: X(a), y1: Y(a), x2: X(b), y2: Y(b) }, gE)); });
+  const nodes = new Map();
+  N.forEach(v => {
+    const g = el("g", { class: "node", transform: `translate(${X(v)},${Y(v)})`, tabindex: 0, role: "button", "aria-label": `Member ${v.id}, ${v.club === "Mr. Hi" ? "joined Mr. Hi" : "joined the Officer"}` }, gN);
+    el("title", {}, g).textContent = `Member ${v.id} · ${v.degreeCount} friends`;
+    const dash = el("circle", { class: "dash", r: 22 }, g), ring = el("circle", { class: "ring", r: 22 }, g);
+    const c = el("circle", { class: "c", r: 14 }, g);
+    const t = el("text", { "text-anchor": "middle", dy: "0.35em" }, g); t.textContent = v.id;
+    if (onPick) { g.addEventListener("click", () => onPick(v.id)); g.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); onPick(v.id); } }); }
+    nodes.set(v.id, { g, c, t, ring, dash });
+  });
+  [["Mr. Hi", 0], ["Officer", 33]].forEach(([lab, id]) => { const v = byId.get(id); el("text", { class: "tag", x: X(v), y: Y(v) - 36, "text-anchor": "middle" }, svg).textContent = lab; });
+  return { svg, nodes, edges };
+}
+function paint(G, id, r, fill, text) {
+  const o = G.nodes.get(id);
+  o.c.style.r = r + "px"; o.c.setAttribute("r", r);
+  o.c.style.fill = fill; o.t.style.fill = text;
+  o.ring.setAttribute("r", r + 6); o.dash.setAttribute("r", r + 6);
+  o.t.style.fontSize = r < 12 ? "9.5px" : "11px";
+}
+function select(G, id) { G.nodes.forEach((o, k) => o.g.classList.toggle("sel", k === id)); }
+function light(G, keys) { const s = new Set(keys); G.edges.forEach((l, k) => l.classList.toggle("lit", s.has(k))); G.svg.classList.toggle("dim", s.size > 0); }
+const incident = id => adj.get(id).map(u => ekey(id, u));
+
+/* ================= HERO: live, draggable network ================= */
+(() => {
+  const svg = $("hero"), W = 900, H = 700, P = 40, tip = $("heroTip"), stage = svg.parentElement;
+  const nodes = N.map(v => ({ id: v.id, x: P + v.x * (W - 2 * P), y: P + v.y * (H - 2 * P), r: 7 + v.degreeCount * 1.25 }));
+  const nm = new Map(nodes.map(d => [d.id, d]));
+  const links = E.map(e => ({ source: nm.get(e.source), target: nm.get(e.target) }));
+  const gE = el("g", {}, svg), gN = el("g", {}, svg);
+  const lines = links.map(() => el("line", {}, gE));
+  const gs = nodes.map(d => {
+    const g = el("g", { class: "node", tabindex: 0, "aria-label": `Member ${d.id}` }, gN);
+    const c = el("circle", { class: "c", r: d.r }, g); c.style.fill = facFill(d.id);
+    const t = el("text", { "text-anchor": "middle", dy: "0.35em" }, g); t.textContent = d.id; t.style.fill = "var(--on-node)";
+    if (d.r < 12) t.style.fontSize = "9px";
+    return g;
+  });
+  const tags = [[0, "Mr. Hi"], [33, "Officer"]].map(([id, lab]) => [nm.get(id), el("text", { class: "tag", "text-anchor": "middle" }, svg)]);
+  tags.forEach(([d, t], i) => t.textContent = i ? "Officer" : "Mr. Hi");
+  function draw() {
+    links.forEach((l, i) => { const a = lines[i]; a.setAttribute("x1", l.source.x); a.setAttribute("y1", l.source.y); a.setAttribute("x2", l.target.x); a.setAttribute("y2", l.target.y); });
+    nodes.forEach((d, i) => gs[i].setAttribute("transform", `translate(${d.x},${d.y})`));
+    tags.forEach(([d, t]) => { t.setAttribute("x", d.x); t.setAttribute("y", d.y - d.r - 12); });
+  }
+  function hover(d, on) {
+    const nb = new Set(adj.get(d.id));
+    gs.forEach((g, i) => g.classList.toggle("faded", on && nodes[i].id !== d.id && !nb.has(nodes[i].id)));
+    lines.forEach((a, i) => a.classList.toggle("lit", on && (links[i].source === d || links[i].target === d)));
+    svg.classList.toggle("dim", on);
+    if (on) {
+      const v = byId.get(d.id), rect = svg.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = rect.width / W;
+      tip.innerHTML = `<b>Member ${d.id}</b>${d.id === 0 ? " · Mr. Hi" : d.id === 33 ? " · Officer" : ""}<br>${v.degreeCount} friends · joined ${v.club === "Mr. Hi" ? "Mr. Hi" : "the Officer"}`;
+      tip.style.left = (rect.left - sr.left + d.x * k) + "px"; tip.style.top = (rect.top - sr.top + (d.y - d.r) * k) + "px"; tip.hidden = false;
+    } else tip.hidden = true;
+  }
+  gs.forEach((g, i) => { g.addEventListener("pointerenter", () => hover(nodes[i], true)); g.addEventListener("pointerleave", () => hover(nodes[i], false)); g.addEventListener("focus", () => hover(nodes[i], true)); g.addEventListener("blur", () => hover(nodes[i], false)); });
+  draw();
+  if (!window.d3) return;   // static layout still shows if the library is unavailable
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).distance(62).strength(0.5))
+    .force("charge", d3.forceManyBody().strength(-170))
+    .force("collide", d3.forceCollide(d => d.r + 4))
+    .force("x", d3.forceX(W / 2).strength(0.04)).force("y", d3.forceY(H / 2).strength(0.05))
+    .alpha(reduce ? 0 : 0.6).alphaDecay(0.03)
+    .on("tick", () => { nodes.forEach(d => { d.x = Math.max(P, Math.min(W - P, d.x)); d.y = Math.max(P, Math.min(H - P, d.y)); }); draw(); });
+  if (reduce) { for (let i = 0; i < 200; i++) sim.tick(); draw(); }
+  d3.selectAll(gs).data(nodes).call(d3.drag()
+    .container(svg)
+    .on("start", (ev, d) => { if (!ev.active) sim.alphaTarget(0.25).restart(); d.fx = d.x; d.fy = d.y; tip.hidden = true; })
+    .on("drag", (ev, d) => { d.fx = Math.max(P, Math.min(W - P, ev.x)); d.fy = Math.max(P, Math.min(H - P, ev.y)); })
+    .on("end", (ev, d) => { if (!ev.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+})();
+
+/* ================= NETWORK GLOSSARY ================= */
+(() => {
+  const S = D.stats;
+  const items = [
+    [S.nodes, "Members (nodes)", "The people in the network."],
+    [S.edges, "Friendships (edges)", "A tie between two members who met outside the club."],
+    [f(S.density, 3), "Density", "Share of all possible friendships that exist: 78 of 561. A sparse network."],
+    [f(S.avg_shortest_path, 2), "Average path length", "Average number of steps between any two members. Diameter, the longest, is 5."],
+    [f(S.avg_clustering, 2), "Clustering coefficient", "How often a member's friends are also friends with each other. High here."],
+    [f(S.assortativity, 2).replace("-", "−"), "Degree assortativity", "Negative: popular members mostly befriend less-connected members, a hub-and-spoke shape."]
+  ];
+  $("gloss").innerHTML = items.map(([v, t, d]) => `<div><b class="v">${v}</b><span class="t">${t}</span><p>${d}</p></div>`).join("");
+})();
+
+/* ================= a. DEGREE ================= */
+(() => {
+  let sel = 0;
+  const G = graph($("gDeg"), { onPick: id => { sel = id; render(); } });
+  const lo = Math.min(...N.map(v => v.degreeCount)), hi = Math.max(...N.map(v => v.degreeCount));
+  N.forEach(v => { const s = (v.degreeCount - lo) / (hi - lo); paint(G, v.id, 9 + 19 * s, ramp(s), rampText(s)); });
+  topList($("degTop"), [...N].sort((a, b) => b.degree - a.degree).slice(0, 5).map(v => ({ id: v.id, v: v.degree })), N.reduce((m, v) => Math.max(m, v.degree), 0));
+  function render() {
+    select(G, sel); light(G, incident(sel));
+    const v = byId.get(sel);
+    $("degWorked").innerHTML = `<h4>Worked example · member ${sel}${sel === 0 ? " (Mr. Hi)" : sel === 33 ? " (Officer)" : ""}</h4>
+      <div class="calc">C<sub>D</sub>(${sel}) = ${v.degreeCount} / 33 = ${f(v.degree)}</div>
+      <p class="small muted">${v.degreeCount} friends: ${adj.get(sel).join(", ")}. Rank <b style="color:var(--ink)">${v.degreeRank}</b> of 34.</p>`;
+  }
+  render();
+})();
+
+/* ---------- indegree / outdegree demo ---------- */
+(() => {
+  const svg = $("gDir"), DN = D.directed.nodes, DE = D.directed.edges, cx = 260, cy = 180, R = 130;
+  let mode = "in", sel = "Ravi";
+  const defs = el("defs", {}, svg);
+  [["a0", "var(--edge)"], ["a1", "var(--gold)"]].forEach(([id, col]) => { const m = el("marker", { id, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6.5, markerHeight: 6.5, orient: "auto-start-reverse" }, defs); el("path", { d: "M0,0 L10,5 L0,10 z", style: `fill:${col}` }, m); });
+  const pos = {}; DN.forEach((v, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / DN.length; pos[v.id] = [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
+  const two = new Set(DE.map(e => e.source + ">" + e.target));
+  const gE = el("g", {}, svg), gN = el("g", {}, svg);
+  const lines = DE.map(e => ({ e, el: el("line", {}, gE) }));
+  const ps = new Map(DN.map(v => {
+    const g = el("g", { class: "p", tabindex: 0, role: "button", "aria-label": v.id }, gN);
+    const c = el("circle", { cx: pos[v.id][0], cy: pos[v.id][1], r: 22 }, g);
+    const t = el("text", { class: "n", x: pos[v.id][0], y: pos[v.id][1], dy: "0.35em", "text-anchor": "middle" }, g);
+    const below = pos[v.id][1] >= cy - 5;
+    const l = el("text", { class: "lbl", x: pos[v.id][0], "text-anchor": "middle" }, g); l.textContent = v.id;
+    const pick = () => { sel = v.id; render(); };
+    g.addEventListener("click", pick); g.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(); } });
+    return [v.id, { g, c, t, l, below, v }];
+  }));
+  const rOf = v => 16 + (mode === "in" ? v.in : v.out) * 6;
+  function render() {
+    $("dirSeg").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.d === mode));
+    ps.forEach(({ g, c, t, l, below, v }, id) => {
+      const r = rOf(v); c.setAttribute("r", r); c.style.r = r + "px"; c.style.fill = "var(--hi)";
+      t.textContent = mode === "in" ? v.in : v.out;
+      l.setAttribute("y", pos[id][1] + (below ? r + 18 : -r - 9));
+      g.classList.toggle("sel", id === sel);
+    });
+    lines.forEach(({ e, el: a }) => {
+      const [x1, y1] = pos[e.source], [x2, y2] = pos[e.target], dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+      const off = two.has(e.target + ">" + e.source) ? 7 : 0, ox = -uy * off, oy = ux * off;
+      const rs = rOf(ps.get(e.source).v), rt = rOf(ps.get(e.target).v);
+      a.setAttribute("x1", x1 + ux * (rs + 2) + ox); a.setAttribute("y1", y1 + uy * (rs + 2) + oy);
+      a.setAttribute("x2", x2 - ux * (rt + 4) + ox); a.setAttribute("y2", y2 - uy * (rt + 4) + oy);
+      const lit = mode === "in" ? e.target === sel : e.source === sel;
+      a.classList.toggle("lit", lit); a.setAttribute("marker-end", `url(#${lit ? "a1" : "a0"})`);
+    });
+    svg.classList.add("dim");
+    const v = ps.get(sel).v;
+    const ins = DE.filter(e => e.target === sel).map(e => e.source), outs = DE.filter(e => e.source === sel).map(e => e.target);
+    $("dirWorked").innerHTML = mode === "in"
+      ? `<h4>Worked example · ${sel}</h4><div class="calc">indegree(${sel}) = ${v.in}</div><p class="small muted">${ins.length ? "Followed by " + ins.join(", ") : "Nobody follows " + sel}. Arrows <b style="color:var(--gold)">into</b> ${sel} measure popularity.</p>`
+      : `<h4>Worked example · ${sel}</h4><div class="calc">outdegree(${sel}) = ${v.out}</div><p class="small muted">${outs.length ? sel + " follows " + outs.join(", ") : sel + " follows nobody"}. Arrows <b style="color:var(--gold)">out of</b> ${sel} measure activity.</p>`;
+    const rows = [...DN].sort((a, b) => (mode === "in" ? b.in - a.in : b.out - a.out) || b.pagerank - a.pagerank);
+    $("dirTable").innerHTML = `<thead><tr><th>Person</th><th class="r">Indegree</th><th class="r">Outdegree</th><th class="r">PageRank</th></tr></thead><tbody>` +
+      rows.map(r => `<tr class="${r.id === sel ? "on" : ""}"><td>${r.id}</td><td class="r">${r.in}</td><td class="r">${r.out}</td><td class="r">${f(r.pagerank)}</td></tr>`).join("") + "</tbody>";
+  }
+  $("dirSeg").addEventListener("click", ev => { const b = ev.target.closest("button"); if (b) { mode = b.dataset.d; render(); } });
+  render();
+})();
+
+/* ================= b. CLOSENESS ================= */
+(() => {
+  let sel = 0;
+  const G = graph($("gClo"), { onPick: id => { sel = id; render(); } });
+  const SHADE = [1, 0.86, 0.6, 0.38, 0.2, 0.08];
+  function render() {
+    const dist = bfs(sel);
+    N.forEach(v => { const d = dist.get(v.id); paint(G, v.id, v.id === sel ? 22 : 15, v.id === sel ? "var(--gold)" : ramp(SHADE[d]), v.id === sel ? "var(--on-node)" : rampText(SHADE[d])); });
+    select(G, sel);
+    light(G, incident(sel));
+    let sum = 0; const cnt = {}; dist.forEach((d, id) => { if (id !== sel) { sum += d; cnt[d] = (cnt[d] || 0) + 1; } });
+    const v = byId.get(sel), maxd = Math.max(...Object.keys(cnt).map(Number));
+    $("cloWorked").innerHTML = `<h4>Worked example · member ${sel}${sel === 0 ? " (Mr. Hi)" : sel === 33 ? " (Officer)" : ""}</h4>
+      <div class="calc">C<sub>C</sub>(${sel}) = 33 / ${sum} = ${f(33 / sum)}</div>
+      <p class="small muted">${Object.entries(cnt).map(([d, c]) => `${c} × ${d}`).join(" + ")} = ${sum} steps in total, so ${f(sum / 33, 2)} steps on average. Rank <b style="color:var(--ink)">${v.closenessRank}</b> of 34.</p>`;
+    const mx = Math.max(...Object.values(cnt));
+    $("cloBars").innerHTML = Array.from({ length: maxd }, (_, i) => i + 1).map(d => `<div><span>${d} step${d > 1 ? "s" : ""}</span><span class="track"><span class="fill" style="width:${((cnt[d] || 0) / mx * 100).toFixed(1)}%;background:${ramp(SHADE[d])};border:1px solid var(--edge)"></span></span><span class="n">${cnt[d] || 0}</span></div>`).join("");
+  }
+  render();
+})();
+
+/* ================= c. BETWEENNESS ================= */
+(() => {
+  let from = 16, to = 25, next = "from";
+  const G = graph($("gBet"), { onPick: id => { if (next === "from") { from = id; next = "to"; } else { if (id !== from) to = id; next = "from"; } sync(); render(); } });
+  const opts = N.map(v => `<option value="${v.id}">Member ${v.id}${v.id === 0 ? " · Mr. Hi" : v.id === 33 ? " · Officer" : ""}</option>`).join("");
+  $("betFrom").innerHTML = opts; $("betTo").innerHTML = opts;
+  const sync = () => { $("betFrom").value = from; $("betTo").value = to; };
+  $("betFrom").addEventListener("change", e => { from = +e.target.value; if (from === to) to = from === 33 ? 0 : 33; sync(); render(); });
+  $("betTo").addEventListener("change", e => { to = +e.target.value; if (from === to) from = to === 0 ? 33 : 0; sync(); render(); });
+  $("betSwap").addEventListener("click", () => { [from, to] = [to, from]; sync(); render(); });
+  function paths(s, t) {
+    const dist = bfs(s), out = [];
+    const walk = (v, acc) => { if (out.length > 60) return; if (v === s) { out.push([s, ...acc]); return; } for (const u of adj.get(v)) if (dist.get(u) === dist.get(v) - 1) walk(u, [v, ...acc]); };
+    walk(t, []); return out;
+  }
+  function render() {
+    const P = paths(from, to), on = new Map();
+    P.forEach(p => p.slice(1, -1).forEach(v => on.set(v, (on.get(v) || 0) + 1)));
+    const lit = new Set(); P.forEach(p => { for (let i = 1; i < p.length; i++) lit.add(ekey(p[i - 1], p[i])); });
+    N.forEach(v => {
+      const end = v.id === from || v.id === to, mid = on.has(v.id);
+      paint(G, v.id, end ? 20 : mid ? 18 : 12, end ? facFill(v.id) : mid ? "var(--gold)" : "var(--ramp-lo)", end || mid ? "var(--on-node)" : "var(--muted)");
+      G.nodes.get(v.id).g.classList.toggle("sel", end);
+    });
+    light(G, [...lit]);
+    const L = P[0].length - 1;
+    $("betPaths").innerHTML = `<p class="small muted">${P.length} shortest path${P.length > 1 ? "s" : ""} of ${L} step${L > 1 ? "s" : ""} from ${from} to ${to}:</p>` +
+      P.slice(0, 8).map(p => `<div>${p.map(chip).join('<span class="arr">→</span>')}</div>`).join("") + (P.length > 8 ? `<p class="small muted">…and ${P.length - 8} more</p>` : "");
+    const rows = [...on.entries()].sort((a, b) => b[1] - a[1]);
+    $("betWorked").innerHTML = `<h4>Worked example · pair ${from} → ${to}</h4>` + (rows.length
+      ? rows.slice(0, 4).map(([v, c]) => `<div class="calc">σ(${v}) / σ = ${c} / ${P.length} = ${f(c / P.length, 2)}</div>`).join("") + `<p class="small muted">Each member in the middle of these paths earns this share for the pair. Members <b style="color:var(--gold)">in gold</b> are the go-betweens.</p>`
+      : `<div class="calc">no one in between</div><p class="small muted">${from} and ${to} are direct friends, so this pair adds nothing to anyone's betweenness.</p>`);
+  }
+  topList($("betTop"), [...N].sort((a, b) => b.betweenness - a.betweenness).slice(0, 5).map(v => ({ id: v.id, v: v.betweenness })), Math.max(...N.map(v => v.betweenness)));
+  sync(); render();
+})();
+
+/* ================= d. EIGENVECTOR (power iteration) ================= */
+(() => {
+  let x, step, timer = null, sel = 2, last = 0;
+  const G = graph($("gEig"), { onPick: id => { sel = id; render(); } });
+  const norm = a => { const s = Math.sqrt(a.reduce((t, v) => t + v * v, 0)); return a.map(v => v / s); };
+  function reset() { stop(); x = norm(N.map(() => 1)); step = 0; last = Infinity; render(); }
+  function iterate() {
+    const y = norm(N.map((v, i) => x[i] + adj.get(v.id).reduce((t, u) => t + x[u], 0)));   // A·x + x (NetworkX's shifted power iteration)
+    last = y.reduce((t, v, i) => t + Math.abs(v - x[i]), 0); x = y; step++;
+    if (last < n * 1e-6) stop();
+    render();
+  }
+  function stop() { if (timer) clearInterval(timer); timer = null; $("eigPlay").textContent = "▶ Run"; }
+  function play() { if (timer) { stop(); return; } if (last < n * 1e-6) reset(); $("eigPlay").textContent = "❚❚ Pause"; timer = setInterval(iterate, 380); }
+  function render() {
+    const lo = Math.min(...x), hi = Math.max(...x);
+    N.forEach((v, i) => { const s = hi - lo < 1e-9 ? 0.35 : (x[i] - lo) / (hi - lo); paint(G, v.id, 9 + 19 * s, ramp(s), rampText(s)); });
+    select(G, sel); light(G, incident(sel));
+    const order = N.map((v, i) => ({ id: v.id, v: x[i] })).sort((a, b) => b.v - a.v);
+    topList($("eigTop"), order.slice(0, 5), order[0].v);
+    const done = last < n * 1e-6;
+    $("eigStatus").innerHTML = step === 0
+      ? `Step 0 · every member starts with the same score (${f(x[0])}). Press <b>Run</b>.`
+      : done ? `<b>Converged after ${step} steps.</b> Scores match NetworkX: member 33 = ${f(x[33])}, member 0 = ${f(x[0])}.`
+      : `Step ${step} · total change this step ${last.toExponential(1)}`;
+    const nb = adj.get(sel), sumNb = nb.reduce((t, u) => t + x[u], 0);
+    $("eigWorked").innerHTML = `<h4>Worked example · member ${sel}</h4>
+      <div class="calc">new x(${sel}) ∝ x(${sel}) + Σ friends = ${f(x[sel])} + ${f(sumNb)}</div>
+      <p class="small muted">Member ${sel} has ${nb.length} friends (${nb.join(", ")}). Each step, every member takes its own score plus its friends' scores, then all scores are rescaled. Friends with high scores push yours up. ${sel === 2 ? "Member 2 has only 10 friends, but they include both leaders, so it finishes 3rd." : ""} Current rank <b style="color:var(--ink)">${order.findIndex(o => o.id === sel) + 1}</b> of 34.</p>`;
+  }
+  $("eigPlay").addEventListener("click", play);
+  $("eigStep").addEventListener("click", () => { stop(); if (last < n * 1e-6) return; iterate(); });
+  $("eigReset").addEventListener("click", reset);
+  reset();
+})();
+
+/* ---------- PageRank with live damping ---------- */
+(() => {
+  const G = graph($("gPr"));
+  function pagerank(d) {
+    let p = N.map(() => 1 / n);
+    for (let it = 0; it < 200; it++) {
+      const q = N.map(v => (1 - d) / n + d * adj.get(v.id).reduce((t, u) => t + p[u] / adj.get(u).length, 0));
+      const diff = q.reduce((t, v, i) => t + Math.abs(v - p[i]), 0); p = q; if (diff < 1e-10) break;
+    }
+    return p;
+  }
+  const maxAt85 = Math.max(...pagerank(0.99));   // largest score any setting reaches, so sizes stay comparable while dragging
+  function render() {
+    const d = +$("prD").value, p = pagerank(d);
+    $("prDv").textContent = d.toFixed(2);
+    N.forEach((v, i) => { const s = (p[i] - 1 / n) / (maxAt85 - 1 / n); const sc = Math.max(0, Math.min(1, s)); paint(G, v.id, 10 + 20 * sc, ramp(0.15 + 0.85 * sc), rampText(0.15 + 0.85 * sc)); });
+    const order = N.map((v, i) => ({ id: v.id, v: p[i] })).sort((a, b) => b.v - a.v);
+    topList($("prTop"), order.slice(0, 5), maxAt85);
+  }
+  $("prD").addEventListener("input", render);
+  render();
+})();
+
+/* ================= COMPARE: bump chart + heatmap ================= */
+(() => {
+  const svg = $("bump"), W = 640, H = 420, L = 70, R = 70, T = 40, B = 24;
+  const ids = [...new Set(METRICS.flatMap(m => [...N].sort((a, b) => b[m] - a[m]).slice(0, 5).map(v => v.id)))];
+  const maxR = Math.max(...ids.flatMap(id => METRICS.map(m => byId.get(id)[m + "Rank"])));
+  const x = i => L + i * (W - L - R) / (METRICS.length - 1), y = r => T + (r - 1) * (H - T - B) / (maxR - 1);
+  for (let r = 1; r <= maxR; r++) el("text", { x: 14, y: y(r), dy: "0.35em" }, svg).textContent = "#" + r;
+  METRICS.forEach((m, i) => { el("line", { class: "gl", x1: x(i), x2: x(i), y1: T - 8, y2: H - B + 6 }, svg); el("text", { class: "axis", x: x(i), y: 20, "text-anchor": "middle" }, svg).textContent = LABEL[m]; });
+  const groups = ids.map(id => {
+    const v = byId.get(id), g = el("g", { class: "m", tabindex: 0, "aria-label": `Member ${id} ranks: ${METRICS.map(m => LABEL[m] + " " + v[m + "Rank"]).join(", ")}` }, svg);
+    const pts = METRICS.map((m, i) => {   // spread members that tie on a rank
+      const r = v[m + "Rank"], tied = ids.filter(o => byId.get(o)[m + "Rank"] === r), j = tied.indexOf(id);
+      return [x(i) + (j - (tied.length - 1) / 2) * 24, y(r)];
+    });
+    const line = el("path", { class: "line", d: "M" + pts.map(p => p.join(",")).join(" L"), style: `stroke:${facFill(id)}` }, g);
+    const dots = pts.map(([px, py]) => el("circle", { class: "pt", cx: px, cy: py, r: 11, style: `fill:${facFill(id)}` }, g));
+    pts.forEach(([px, py]) => { el("text", { class: "lab", x: px, y: py, dy: "0.35em", "text-anchor": "middle" }, g).textContent = id; });
+    const on = s => { svg.classList.toggle("hov", s); line.classList.toggle("on", s); dots.forEach(d => d.classList.toggle("on", s)); };
+    g.addEventListener("pointerenter", () => on(true)); g.addEventListener("pointerleave", () => on(false));
+    g.addEventListener("focus", () => on(true)); g.addEventListener("blur", () => on(false));
+    return g;
+  });
+  const C = D.correlation;
+  let h = `<span></span>${C.metrics.map(m => `<span class="h col">${LABEL[m]}</span>`).join("")}`;
+  C.matrix.forEach((row, i) => { h += `<span class="h">${LABEL[C.metrics[i]]}</span>`; row.forEach(v => { const p = Math.max(0, Math.min(100, (v - 0.6) / 0.4 * 100)); h += `<span class="cell" style="background:color-mix(in oklab, var(--bg), var(--gold) ${p.toFixed(0)}%);color:${p > 55 ? "var(--on-node)" : "var(--ink)"}">${f(v, 2)}</span>`; }); });
+  $("heat").innerHTML = h;
+})();
+
+/* ================= FACTIONS ================= */
+(() => {
+  const FILLS = ["var(--hi)", "var(--off)", "var(--c2)", "var(--c3)"];
+  const M = [
+    { key: "Ground truth (1977 split)", label: "Real split", note: "What actually happened: 17 members followed Mr. Hi and 17 the Officer. Its modularity (0.39) is lower than the best algorithm's, so real splits are not purely structural." },
+    { key: "Girvan-Newman (2 groups)", label: "Girvan–Newman", note: "Keeps deleting the tie with the highest edge betweenness (the busiest bridge) until the network falls into two pieces. Gets 32 of 34 right. The two it misses, 2 and 8, are bridge members with friends on both sides." },
+    { key: "Louvain", label: "Louvain", note: "Maximises modularity and finds 4 tight groups, the highest score of all. Each group sits almost entirely inside one faction. Because it returns 4 groups instead of 2, its ARI and NMI are lower." },
+    { key: "Greedy modularity", label: "Greedy modularity", note: "Merges groups step by step while modularity improves. Finds 3 groups; 2 members land in a group led by the other side." },
+    { key: "Label propagation", label: "Label propagation", note: "Each member repeatedly adopts the most common group among its friends. Fast, but the least accurate here." },
+    { key: "leaders", label: "Nearer leader", note: "Built from closeness: each member joins whichever leader is fewer steps away (ties go to the leader with more shared friends). Predicts 33 of 34. The miss is member 8, one step from both leaders." }
+  ];
+  let key = M[0].key;
+  const G = graph($("gComm"));
+  $("commSeg").innerHTML = M.map(m => `<button type="button" data-k="${m.key}">${m.label}</button>`).join("");
+  $("commSeg").addEventListener("click", ev => { const b = ev.target.closest("button"); if (b) { key = b.dataset.k; render(); } });
+  function render() {
+    $("commSeg").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === key));
+    const m = M.find(q => q.key === key);
+    let labels, k; const wrong = new Set();
+    if (key === "leaders") { labels = N.map(v => v.predicted === "Mr. Hi" ? 0 : 1); k = 2; N.forEach(v => { if (v.predicted !== v.club) wrong.add(v.id); }); }
+    else {
+      labels = N.map(v => v.communities[key]); k = Math.max(...labels) + 1;
+      for (let c = 0; c < k; c++) { const mem = N.filter((v, i) => labels[i] === c), h = mem.filter(v => v.club === "Mr. Hi").length, maj = h >= mem.length - h ? "Mr. Hi" : "Officer"; mem.forEach(v => { if (v.club !== maj) wrong.add(v.id); }); }
+    }
+    const fill = c => { if (k === 2) { const mem = N.filter((v, i) => labels[i] === c), h = mem.filter(v => v.club === "Mr. Hi").length; return h >= mem.length - h ? "var(--hi)" : "var(--off)"; } return FILLS[c % 4]; };
+    N.forEach((v, i) => { paint(G, v.id, 15, fill(labels[i]), "var(--on-node)"); G.nodes.get(v.id).g.classList.toggle("wrong", wrong.has(v.id)); });
+    const leg = []; for (let c = 0; c < k; c++) leg.push(`<span><span class="dot" style="background:${fill(c)}"></span>${k === 2 ? (fill(c) === "var(--hi)" ? "Mr. Hi's group" : "Officer's group") : "Group " + (c + 1)} (${labels.filter(q => q === c).length})</span>`);
+    leg.push(`<span><span class="ring-key"></span>placed with the other side</span>`);
+    $("commLegend").innerHTML = leg.join("");
+    const sc = key === "leaders"
+      ? [[pct(D.leaderPrediction.accuracy), "accuracy"], ["2", "groups"], [String(wrong.size), "member misplaced"], ["—", "no modularity, it's a rule"]]
+      : (r => [[pct(r.accuracy_majority_map), "accuracy"], [String(r.n_communities), "groups found"], [f(r.modularity), "modularity Q"], [f(r.ARI, 2) + " / " + f(r.NMI, 2), "ARI / NMI vs real split"]])(D.communities[key]);
+    $("commCard").innerHTML = `<span class="eyebrow">${m.label}</span><div class="scores">${sc.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join("")}</div><p>${m.note}</p>` +
+      (wrong.size ? `<p class="small muted">Misplaced: ${[...wrong].sort((a, b) => a - b).map(chip).join(" ")}</p>` : "") +
+      `<p class="small muted">Modularity: how much denser ties are inside groups than chance would give. ARI and NMI: agreement with the real split, where 1 is perfect.</p>`;
+  }
+  render();
+  const H = D.homophily;
+  $("homoVal").textContent = pct(H.within_fraction);
+  $("homoText").textContent = `${H.within_faction_edges} of ${H.within_faction_edges + H.cross_faction_edges} friendships join members of the same side. If friendships ignored the factions, about ${pct(H.expected_if_random)} would. The club split along lines that already existed.`;
+})();
+
+/* ================= ROBUSTNESS ================= */
+(() => {
+  const G = graph($("gAtk")), sel = $("atkMetric"), sl = $("atkK");
+  sel.innerHTML = METRICS.map(m => `<option value="${m}"${m === "betweenness" ? " selected" : ""}>${LABEL[m]}</option>`).join("");
+  function comps(removed) {
+    const seen = new Set(), out = [];
+    N.forEach(v => { if (removed.has(v.id) || seen.has(v.id)) return; const c = [], st = [v.id]; seen.add(v.id); while (st.length) { const a = st.pop(); c.push(a); adj.get(a).forEach(b => { if (!removed.has(b) && !seen.has(b)) { seen.add(b); st.push(b); } }); } out.push(c); });
+    return out.sort((a, b) => b.length - a.length);
+  }
+  function render() {
+    const m = sel.value, k = +sl.value, order = D.attack[m].order, rem = new Set(order.slice(0, k)), big = new Set(comps(rem)[0] || []);
+    N.forEach(v => { const gone = rem.has(v.id), inb = big.has(v.id); paint(G, v.id, 14, gone ? "var(--line)" : inb ? facFill(v.id) : "var(--ramp-lo)", inb ? "var(--on-node)" : "var(--muted)"); G.nodes.get(v.id).g.classList.toggle("faded", gone); });
+    G.edges.forEach((l, key) => { const [a, b] = key.split("-").map(Number); l.classList.toggle("gone", rem.has(a) || rem.has(b)); });
+    $("atkKv").textContent = k;
+    $("atkVal").textContent = pct(big.size / n);
+    $("atkTxt").textContent = `still connected (${big.size} of 34). Random removal: about ${pct(D.attack.random.lcc[k])}.`;
+    $("atkList").innerHTML = k ? "Removed: " + order.slice(0, k).map(chip).join(" ") : "No one removed yet. Drag the slider.";
+    chart(m, k);
+  }
+  function chart(m, k) {
+    const svg = $("atkChart"); svg.innerHTML = "";
+    const L = 40, R = 92, T = 10, B = 30, W = 440, H = 240, x = i => L + i / 12 * (W - L - R), y = v => T + (1 - v) * (H - T - B);
+    [0, .25, .5, .75, 1].forEach(v => { el("line", { class: "grid", x1: L, x2: W - R, y1: y(v), y2: y(v) }, svg); el("text", { x: L - 6, y: y(v), dy: "0.35em", "text-anchor": "end" }, svg).textContent = Math.round(v * 100) + "%"; });
+    [0, 2, 4, 6, 8, 10, 12].forEach(i => { el("text", { x: x(i), y: H - B + 15, "text-anchor": "middle" }, svg).textContent = i; });
+    el("text", { x: (L + W - R) / 2, y: H - 2, "text-anchor": "middle" }, svg).textContent = "members removed";
+    const path = a => a.map((v, i) => (i ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1)).join("");
+    METRICS.filter(q => q !== m).forEach(q => el("path", { class: "curve", d: path(D.attack[q].lcc) }, svg));
+    const rnd = D.attack.random.lcc; el("path", { class: "curve rand", d: path(rnd) }, svg);
+    el("text", { x: x(12) + 6, y: y(rnd[12]), dy: "0.35em" }, svg).textContent = "random";
+    const on = D.attack[m].lcc; el("path", { class: "curve on", d: path(on) }, svg);
+    el("text", { class: "lab-on", x: x(12) + 6, y: y(on[12]), dy: "0.35em" }, svg).textContent = LABEL[m];
+    el("line", { class: "marker", x1: x(k), x2: x(k), y1: T, y2: H - B }, svg);
+    el("circle", { class: "pt", cx: x(k), cy: y(on[k]), r: 5 }, svg);
+  }
+  sel.addEventListener("change", render); sl.addEventListener("input", render); render();
+})();
+})();
+</script>
+</body>
+</html>

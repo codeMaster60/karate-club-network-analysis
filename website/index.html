@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Barlow:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap">
 <style>
 /* Layout: a gritty 1980s action-drama told in scenes. Credits-style opening over a live network,
-   then one scene per metric (a–d, as set in the lab brief): definition on the left, hands-on instrument on the right.
+   then one scene per metric (a–d): definition on the left, hands-on instrument on the right.
    One committed look: soot, dust, turmeric and blood, under film grain. */
 :root {
   --soot: #0e0b09;       /* page */
@@ -123,7 +123,7 @@ section { padding-block: 96px 0; display: grid; gap: 30px; scroll-margin-top: 60
 .head { display: grid; gap: 14px; max-width: 74ch; }
 .head > p { color: var(--dust); font-size: 1.08rem; }
 .brief { position: relative; padding: 18px 22px 18px 26px; background: var(--char); border-left: 5px solid var(--blood); max-width: 86ch; font-size: 1.08rem; }
-.brief::before { content: "LAB BRIEF"; position: absolute; top: -10px; left: 18px; background: var(--blood); color: var(--bone); font: 700 0.72rem var(--type); letter-spacing: .18em; padding: 3px 8px; }
+.brief::before { content: "DEFINITION"; position: absolute; top: -10px; left: 18px; background: var(--blood); color: var(--bone); font: 700 0.72rem var(--type); letter-spacing: .18em; padding: 3px 8px; }
 .brief b { color: var(--turmeric); }
 
 .scene { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); gap: 24px; align-items: start; }
@@ -273,6 +273,12 @@ table.t tr.on td { color: var(--turmeric); }
 footer { margin-top: 96px; padding-top: 30px; border-top: 1px solid var(--rule); display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 30px; color: var(--dust); font-size: 0.92rem; }
 @media (max-width: 760px) { footer { grid-template-columns: minmax(0,1fr); } }
 footer h3 { font-size: 1.4rem; color: var(--bone); margin-bottom: 10px; }
+footer .madeby { grid-column: 1 / -1; display: grid; gap: 10px; padding-bottom: 26px; border-bottom: 1px solid var(--rule); }
+footer .madeby h3 { font-size: clamp(2rem, 5vw, 3.2rem); margin: 0; }
+footer .madeby ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 36px; }
+footer .madeby li { display: grid; gap: 2px; }
+footer .madeby li b { font: 800 1.3rem var(--display); text-transform: uppercase; letter-spacing: .04em; color: var(--bone); }
+footer .madeby li span { font: 700 0.95rem var(--type); color: var(--turmeric); letter-spacing: .06em; }
 footer ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; }
 .end { text-align: center; font: 900 clamp(3rem, 9vw, 6rem)/1 var(--display); text-transform: uppercase; color: var(--rule); margin-top: 60px; letter-spacing: .04em; }
 
@@ -309,7 +315,7 @@ footer ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; }
 <!-- ======================= OPENING ======================= -->
 <header class="opening">
   <div class="titles">
-    <span class="pre">ATSMA Lab · Social Network Analysis</span>
+    <span class="pre">Team Kanayaraasi · Social Network Analysis</span>
     <h1><span class="a">The Karate</span><span class="b">Club</span><span class="c">Split</span></h1>
     <div class="tear" aria-hidden="true"><i></i><i></i></div>
     <p class="logline">One university dojo. 34 members. 78 friendships. Then a feud between the <b>instructor</b> and the <b>club officer</b> tears it in two. Four centrality metrics ask who held the club together, and whether the network saw the split coming.</p>
@@ -318,6 +324,8 @@ footer ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; }
       <dt>Ensemble</dt><dd>32 club members</dd>
       <dt>True record</dt><dd>Wayne W. Zachary, 1970–72 · published 1977</dd>
       <dt>Analysis</dt><dd>Degree · Closeness · Betweenness · Eigenvector · PageRank</dd>
+      <dt>Presented by</dt><dd class="hi">Team Kanayaraasi</dd>
+      <dt>Team</dt><dd>A. Sai Jayanth · 23BCB7169<br>L. Sai Sampath · 23BCB7136<br>P. Alex Rohan · 23BCB7255</dd>
     </dl>
     <div class="cta">
       <a class="btn red" href="#degree">Start the analysis ↓</a>
@@ -584,6 +592,15 @@ footer ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; }
 </section>
 
 <footer>
+  <div class="madeby">
+    <span class="kicker">Made by</span>
+    <h3>Team Kanayaraasi</h3>
+    <ul>
+      <li><b>A. Sai Jayanth</b><span>23BCB7169</span></li>
+      <li><b>L. Sai Sampath</b><span>23BCB7136</span></li>
+      <li><b>P. Alex Rohan</b><span>23BCB7255</span></li>
+    </ul>
+  </div>
   <div>
     <h3>Data &amp; method</h3>
     <p>Zachary's Karate Club: 34 members, 78 friendships, and the side each member joined. Metrics computed in Python with NetworkX and checked against the Network Repository's published statistics. On this page, closeness, shortest paths, eigenvector centrality and PageRank are recomputed live in your browser from the same graph. Members are numbered 0–33; add 1 for the numbering in Zachary's paper.</p>

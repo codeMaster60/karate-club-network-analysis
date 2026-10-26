@@ -1,4 +1,4 @@
-# The Karate Club Split — Social Network Analysis Metrics
+# The Karate Club Split - Social Network Analysis Metrics
 
 **ATSMA Lab Component.** Core centrality metrics (degree, closeness, betweenness, eigenvector, PageRank) computed and interpreted on Zachary's Karate Club, then tested against what actually happened when the club split.
 
